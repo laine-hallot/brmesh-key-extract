@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>brmesh-homeassistant</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div style="display: flex; gap: 8px">
+      <div style="position: relative">
+        <canvas id="canvas" style="min-height: 360px"></canvas>
+        <span
+          id="loadingMessage"
+          style="
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+          "
+        ></span>
+      </div>
+      <div
+        style="
+          flex: 1;
+          background-color: rgb(245, 245, 245);
+          border-radius: 32px;
+        "
+      >
+        <span id="mesh-key"></span>
+        <div id="output">
+          <span id="outputMessage"></span>
+          <div>
+            <span id="outputData"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
