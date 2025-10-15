@@ -9,7 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "jsqr": "^1.4.0"
+    "@tailwindcss/vite": "^4.1.14",
+    "jsqr": "^1.4.0",
+    "tailwindcss": "^4.1.14"
   },
   "devDependencies": {
     "typescript": "~5.9.3",

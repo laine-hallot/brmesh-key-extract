@@ -5,8 +5,14 @@ const domQueryResults = {
   loadingMessage: document.querySelector<HTMLSpanElement>("#loadingMessage"),
   outputContainer: document.querySelector<HTMLSpanElement>("#output"),
   meshKeyElement: document.querySelector<HTMLCanvasElement>("#mesh-key"),
-  outputMessage: document.querySelector<HTMLSpanElement>("#outputMessage"),
   outputData: document.querySelector<HTMLSpanElement>("#outputData"),
+  errorDisplay: document.querySelector<HTMLDivElement>("#error-display"),
+  errorReason: document.querySelector<HTMLSpanElement>("#error-reason"),
+  cameraStart: document.querySelector<HTMLButtonElement>("#camera-start"),
+  instructionContainer: document.querySelector<HTMLDivElement>(
+    "#instruction-container"
+  ),
+  instructionText: document.querySelector<HTMLSpanElement>("#instruction-text"),
 };
 
 export type Awa = {
@@ -30,11 +36,26 @@ export const attachToDom = ():
 };
 
 export const createDeviceDetailsElement = (device: BaseDevice) => {
-  const data = document.createElement("pre");
-  data.innerText = JSON.stringify(device);
+  const title = document.createElement("summary");
+  title.innerText = device.n;
 
-  const container = document.createElement("div");
+  const data = document.createElement("pre");
+  data.innerText = JSON.stringify(device, null, 2);
+
+  const container = document.createElement("details");
   container.className = "device-details";
+  container.appendChild(title);
   container.appendChild(data);
   return container;
 };
+
+export const loadingComponent = (loadingMessage: HTMLSpanElement) => ({
+  show: () => {
+    loadingMessage.innerText = "⌛ Loading video...";
+    loadingMessage.classList.remove("hidden");
+  },
+  hide: () => {
+    loadingMessage.classList.add("hidden");
+    loadingMessage.innerText = "";
+  },
+});
