@@ -4,35 +4,67 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/src/style.css" rel="stylesheet" />
     <title>brmesh-homeassistant</title>
   </head>
-  <body>
-    <div id="app"></div>
-    <div style="display: flex; gap: 8px">
-      <div style="position: relative">
-        <canvas id="canvas" style="min-height: 360px"></canvas>
-        <span
-          id="loadingMessage"
-          style="
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-          "
-        ></span>
-      </div>
+  <body
+    class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-50 transition-colors duration-200"
+  >
+    <header class="px-6 py-4 text-xl mb-2 lg:mb-16">
+      <span class="">BRmesh Key Extractor</span>
+    </header>
+    <div class="lg:px-12">
       <div
-        style="
-          flex: 1;
-          background-color: rgb(245, 245, 245);
-          border-radius: 32px;
-        "
+        class="flex flex-col lg:flex-row gap-2 lg:gap-0 rounded-xl lg:border-1 border-gray-200 dark:border-gray-800"
       >
-        <span id="mesh-key"></span>
-        <div id="output">
-          <span id="outputMessage"></span>
-          <div>
-            <span id="outputData"></span>
+        <div
+          class="relative lg:p-0 rounded-l-2xl min-h-96 bg-white/5 min-w-1/3 transition-all duration-200"
+        >
+          <canvas
+            id="canvas"
+            class="min-h-96 rounded-md lg:rounded-xl lg:rounded-r-none max-w-screen"
+          ></canvas>
+          <button
+            id="camera-start"
+            class="absolute top-1/2 left-1/2 -translate-1/2 rounded-lg px-4 py-2 bg-purple-400 dark:bg-purple-500 text-white dark:text-gray-50 cursor-pointer"
+          >
+            Start Camera
+          </button>
+          <span
+            id="loadingMessage"
+            class="absolute top-1/2 left-1/2 -translate-1/2 hidden"
+            >⌛ Loading video...</span
+          >
+        </div>
+        <div
+          class="flex-1 rounded-r-xl border-l border-gray-200 dark:border-gray-800"
+        >
+          <div id="error-display" class="hidden min-h-12 lg:min-h-auto h-full">
+            <div class="flex w-full h-full justify-center items-center">
+              <span id="error-reason"></span>
+            </div>
+          </div>
+          <div id="instruction-container" class="hidden h-full">
+            <div class="flex w-full h-full justify-center items-center">
+              <span id="instruction-text"></span>
+            </div>
+          </div>
+          <div id="output" class="hidden">
+            <div class="flex flex-col gap-6 px-6 py-4">
+              <h2 class="text-2xl underline decoration-dashed">
+                Mesh Information
+              </h2>
+              <div class="flex flex-col gap-4">
+                <div>
+                  <label>Mesh Key: </label
+                  ><span id="mesh-key" class="font-bold"></span>
+                </div>
+                <div class="">
+                  <span class="mb-2">Devices:</span>
+                  <div id="outputData" class="flex flex-col gap-2"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

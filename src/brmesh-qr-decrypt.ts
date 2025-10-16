@@ -1,24 +1,38 @@
-const B64_KEY = "lol"; // same constants the Android app uses
-const B64_IV = "lmao";
+// the code in this file is largely based on https://community.home-assistant.io/t/brmesh-app-bluetooth-lights/473486/122
+const B64_KEY = "YnJnZGJyZ2RicmdkYnJnZA=="; // same constants the Android app uses
+const B64_IV = "MDM5MjAzOTIwMzkyMDMwMA==";
 
 /**
  * Convert a Base‑64 string to a Uint8Array.
  */
-function b64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
+const b64ToBytes = (b64: string): Uint8Array<ArrayBuffer> => {
   // `atob` works on browsers – it returns a binary string.
   const binary = atob(b64);
   const out = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; ++i) out[i] = binary.charCodeAt(i);
   return out;
-}
+};
 
 /**
  * Convert an Uint8Array (or ArrayBuffer) to a UTF‑8 string.
  */
-function bytesToString(buf: ArrayBuffer | Uint8Array): string {
+const bytesToString = (buf: ArrayBuffer | Uint8Array): string => {
   const decoder = new TextDecoder("utf-8");
   return decoder.decode(buf);
-}
+};
+
+const encodingType = (keyBytes: Uint8Array<ArrayBuffer>): "AES-CBC" => {
+  switch (keyBytes.length) {
+    case 16:
+      return "AES-CBC"; // AES‑128‑CBC
+    case 24:
+      return "AES-CBC"; // AES‑192‑CBC (supported by browsers)
+    case 32:
+      return "AES-CBC"; // AES‑256‑CBC
+    default:
+      throw new Error(`Unsupported AES key length ${keyBytes.length} bytes`);
+  }
+};
 
 /**
  * Main decryption routine.
@@ -26,76 +40,68 @@ function bytesToString(buf: ArrayBuffer | Uint8Array): string {
  * @param b64Payload – QR payload as a Base‑64 string.
  * @returns A promise that resolves to `[meshKey, devices]`.
  */
-export async function decryptBrmeshQR(
-  b64Payload: string
-): Promise<{ meshKey: number; devices: BaseDevice[] }> {
-  // -----------------------------------------------------------------
-  // 1️⃣  Prepare key, IV and import the key for WebCrypto
-  // -----------------------------------------------------------------
-  const keyBytes = b64ToBytes(B64_KEY);
-  const ivBytes = b64ToBytes(B64_IV);
-  const algorithm = (() => {
-    switch (keyBytes.length) {
-      case 16:
-        return "AES-CBC"; // AES‑128‑CBC
-      case 24:
-        return "AES-CBC"; // AES‑192‑CBC (supported by browsers)
-      case 32:
-        return "AES-CBC"; // AES‑256‑CBC
-      default:
-        throw new Error(`Unsupported AES key length ${keyBytes.length} bytes`);
+export async function decryptBrmeshQR(b64Payload: string): Promise<
+  | {
+      ok: true;
+      data: {
+        meshKey: number;
+        devices: { ok: true; data: BaseDevice[] } | { ok: false };
+      };
     }
-  })();
+  | { ok: false; error: unknown }
+> {
+  try {
+    const keyBytes = b64ToBytes(B64_KEY);
+    const ivBytes = b64ToBytes(B64_IV);
 
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    keyBytes,
-    { name: algorithm },
-    false, // not extractable – we never need to export it again
-    ["decrypt"]
-  );
+    const algorithm = encodingType(keyBytes);
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyBytes,
+      { name: algorithm },
+      false, // not extractable – we never need to export it again
+      ["decrypt"]
+    );
 
-  // -----------------------------------------------------------------
-  // 2️⃣  Decrypt the payload (still padded)
-  // -----------------------------------------------------------------
-  const encrypted = b64ToBytes(b64Payload);
-  const rawDecrypted = await crypto.subtle.decrypt(
-    { name: algorithm, iv: ivBytes },
-    cryptoKey,
-    encrypted
-  );
+    const encrypted = b64ToBytes(b64Payload);
+    const rawDecrypted = await crypto.subtle.decrypt(
+      { name: algorithm, iv: ivBytes },
+      cryptoKey,
+      encrypted
+    );
 
-  // -----------------------------------------------------------------
-  // 3️⃣  Strip PKCS#7 padding (mirrors the Python code)
-  // -----------------------------------------------------------------
-  const padded = new Uint8Array(rawDecrypted);
-  //const plaintextBytes = stripPKCS7(padded);
-  const plaintext = bytesToString(padded);
+    const padded = new Uint8Array(rawDecrypted);
+    const plaintext = bytesToString(padded);
 
-  // -----------------------------------------------------------------
-  // 4️⃣  Split into JSON part and mesh key
-  // -----------------------------------------------------------------
-  // Expected format:  <json>];<meshKey>
-  const regexResult = plaintext.matchAll(/(?<json>.*?\]);(?<meshKey>.*)/g);
-  const textMatch = regexResult.next().value;
+    const regexResult = plaintext.matchAll(/(?<json>.*?\]);(?<meshKey>.*)/g);
+    const textMatch = regexResult.next().value;
 
-  const json = textMatch?.groups?.json;
-  const meshKey = textMatch?.groups?.meshKey;
+    const json = textMatch?.groups?.json;
+    const meshKey = textMatch?.groups?.meshKey;
 
-  if (json === undefined || meshKey === undefined) {
-    throw new Error("Unexpected payload format - missing `];` separator");
+    if (json === undefined || meshKey === undefined) {
+      throw new Error("Unexpected payload format - missing `];` separator");
+    }
+
+    const rawDeviceData: string[] = JSON.parse(json!);
+    const devices = parseDeviceEntries(rawDeviceData);
+    if (devices.ok) {
+      return {
+        ok: true,
+        data: { meshKey: Number.parseInt(meshKey, 16), devices },
+      };
+    }
+    return {
+      ok: true,
+      data: { meshKey: Number.parseInt(meshKey, 16), devices },
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      ok: false,
+      error: err,
+    };
   }
-
-  console.log(plaintext);
-
-  // The JSON that the Android app builds ends with a stray `]` that we removed
-  // when we split on `];`.  Add it back before parsing.
-  const rawDeviceData: string[] = JSON.parse(json!);
-  const devices = parseDeviceEntries(rawDeviceData);
-  if (devices.ok) {
-    return { meshKey: Number(meshKey), devices: devices.data };
-  }
-  return { meshKey: Number(meshKey), devices: [] };
 }
 
 export type BaseDevice = {
